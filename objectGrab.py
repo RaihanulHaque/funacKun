@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+from pyzbar.pyzbar import decode
 
 # def stackImage(scale, imageArray):
 #     rows = len(imageArray)
@@ -43,7 +44,10 @@ def crop(img):
     output = cv2.warpPerspective(img, matrix, (width,height))
     return output
 
-def getContours(img, imgContour):
+def getQRvalue(image):
+    return decode(image)[0].data.decode()
+
+def getContoursAndCenter(img, imgContour):
     contours, hierarchy = cv2.findContours(img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
     
     for cont in contours:
@@ -70,6 +74,11 @@ def getContours(img, imgContour):
             # cv2.polylines(img, [box], True, (255,0,0), 2)
             # print(box)
 
+
+
+
+
+
 def empty(a):
     pass
 
@@ -77,7 +86,7 @@ def empty(a):
 
 frameWidth = 600
 frameHeight = 600
-cap = cv2.VideoCapture(1)
+cap = cv2.VideoCapture(2)
 # cap.set(3, frameWidth)
 # cap.set(4, frameHeight)
 
@@ -102,7 +111,8 @@ while True:
     # imgStack = stackImage(0.8,([img, imgCanny]))
     kernel = np.ones((5,5))
     imgDil = cv2.dilate(imgCanny, kernel, iterations=1)
-    getContours(imgDil, imgContour)
+    if getQRvalue(img)=="A":
+        getContoursAndCenter(imgDil, imgContour)
     cv2.imshow("Result",imgContour)
     
     if cv2.waitKey(1) & 0xFF == ord('q'):
