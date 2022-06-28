@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
-from pyzbar.pyzbar import decode
+# from pyzbar.pyzbar import decode
+# from colorsys import hsv_to_rgb
 
 # def stackImage(scale, imageArray):
 #     rows = len(imageArray)
@@ -44,8 +45,27 @@ def crop(img):
     output = cv2.warpPerspective(img, matrix, (width,height))
     return output
 
-def getQRvalue(image):
-    return decode(image)[0].data.decode()
+# def getQRvalue(image):
+#     return decode(image)[0].data.decode()
+
+
+def blackMask(image):
+    bool = False   # Check wether the function detects the color or not
+    mask = cv2.inRange(image, (0, 0, 0), (35, 55, 100))
+    if np.sum(mask)>0:
+        bool = True     # if black colour detected it set bool to True
+    return bool,mask
+
+def redMask(image):
+    bool = False
+    img_hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    lower_red_mask = cv2.inRange(img_hsv, (0,50,20), (5,255,255))
+    upper_red_mask = cv2.inRange(img_hsv, (175,50,20), (180,255,255))
+    ## Merge the mask and crop the red regions
+    mask = cv2.bitwise_or(lower_red_mask, upper_red_mask )
+    if np.sum(mask)>0:
+        bool = True
+    return bool,mask
 
 def getContoursAndCenter(img, imgContour):
     contours, hierarchy = cv2.findContours(img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
@@ -98,22 +118,34 @@ cv2.createTrackbar("Area","Parameters",5000, 30000, empty)
 
 
 while True:
-    
     success, img = cap.read()
-    img = crop(img)
     img = cv2.flip(img,0)
+    img = cv2.flip(img,1)
+    img = crop(img)
     imgContour = img.copy()
-    imgBlur = cv2.GaussianBlur(img, (7,7),1)
-    imgGray = cv2.cvtColor(imgBlur, cv2.COLOR_BGR2GRAY)
+    # imgBlur = cv2.GaussianBlur(img, (7,7),1)
+    # imgGray = cv2.cvtColor(imgBlur, cv2.COLOR_BGR2GRAY)
     threshold1 = cv2.getTrackbarPos("Threshold1","Parameters")
     threshold2 = cv2.getTrackbarPos("Threshold2","Parameters")
-    imgCanny = cv2.Canny(imgGray,threshold1,threshold2)
+    # imgCanny = cv2.Canny(imgGray,threshold1,threshold2)
     # imgStack = stackImage(0.8,([img, imgCanny]))
-    kernel = np.ones((5,5))
-    imgDil = cv2.dilate(imgCanny, kernel, iterations=1)
-    if getQRvalue(img)=="A":
-        getContoursAndCenter(imgDil, imgContour)
+    # kernel = np.ones((5,5))
+    # imgDil = cv2.dilate(imgCanny, kernel, iterations=1)
+
+    isBlack, bMask = blackMask(img)
+    getContoursAndCenter(bMask, imgContour)
     cv2.imshow("Result",imgContour)
+    if isBlack:
+        print("Yes")
+    else:
+        print("No")
+    isRed, rMask = redMask(img)
+    getContoursAndCenter(rMask, imgContour)
+    cv2.imshow("Result",imgContour)
+    if isRed:
+        print("Yes")
+    else:
+        print("No")
     
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
